@@ -940,7 +940,7 @@ function Stats({db, go}){
 }
 
 /* ============================== sync (frontend-only, GitHub Gist) ============================== */
-// Mirrors the VSCodeSyncFiles idea: one remote blob, a token in local storage, push/pull.
+// Облачная синхронизация целиком на фронте: один приватный gist хранит весь DB, токен лежит локально, push/pull по кнопке.
 const SyncCfg = {
   get(){ try{return JSON.parse(store.get('1kzariki:sync')||'{}');}catch(e){return {};} },
   set(c){ store.set('1kzariki:sync', JSON.stringify(c)); },
@@ -982,8 +982,8 @@ function SyncPanel({db, replaceDB, toast}){
     <div>
       <h2 style={{fontSize:24,margin:'2px 0 6px'}}>Синхронизация</h2>
       <p style={{color:'var(--bone-dim)',fontSize:14,lineHeight:1.5,margin:'0 0 16px'}}>
-        Бэкап и облако в духе твоего VSCodeSyncFiles: один приватный gist + персональный токен.
-        Всё хранится локально, в облако уходит только по кнопке.</p>
+        Один приватный gist + персональный токен. Всё хранится локально,
+        в облако уходит только по кнопке.</p>
 
       <div className="h-sec" style={{marginTop:0}}>Файл</div>
       <div className="board-actions" style={{marginTop:0}}>
