@@ -1,0 +1,45 @@
+# Деплой 1KZARIKI на GitHub Pages.
+# Сайт статический (нет сборки) — просто публикуем содержимое репозитория как есть.
+#
+# Включить один раз: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# После этого каждый пуш в main сам выкатывает сайт.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # можно запустить вручную из вкладки Actions
+
+# права, нужные официальным Pages-экшенам
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# не гоняем два деплоя параллельно; новый отменяет недокатанный старый
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."          # корень репозитория (index.html, sw.js, manifest, icons/…)
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

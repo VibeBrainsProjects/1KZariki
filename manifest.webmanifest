@@ -1,0 +1,19 @@
+{
+  "name": "Зарики — 1000 на кубиках",
+  "short_name": "Зарики",
+  "description": "Счётчик для игры в 1000 на пяти кубиках: партии, бочка, ямы, заходы и штрафы считаются сами.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#15181C",
+  "theme_color": "#15181C",
+  "categories": ["games", "utilities"],
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

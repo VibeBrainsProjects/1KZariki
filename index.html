@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Зарики — счёт для игры в 1000 на кубиках</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#15181C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Зарики">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Manrope:wght@400;500;600;700;800&family=Caveat:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
+<style>
+:root{
+  --graphite:#15181C; --graphite-2:#1B1F24; --slate:#23282F; --slate-2:#2C323A;
+  --line:#363D46; --line-soft:#2A3038;
+  --bone:#ECE7DD; --bone-dim:#A9B0AC; --bone-faint:#6E767A;
+  --felt:#1E6F4E; --felt-deep:#175A40; --felt-glow:rgba(46,168,116,.16);
+  --brass:#E0A23B; --brass-deep:#B97E22; --brass-glow:rgba(224,162,59,.16);
+  --red:#D8533D; --red-glow:rgba(216,83,61,.15);
+  --gold:#F2C75A;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.65);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(46,168,116,.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(224,162,59,.07), transparent 55%),
+    var(--graphite);
+  color:var(--bone);
+  font-family:'Manrope',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  min-height:100vh; min-height:100dvh;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.chalk{font-family:'Caveat',cursive}
+.brand{font-family:'Unbounded',sans-serif}
+
+#root{max-width:980px;margin:0 auto;padding:0 16px calc(96px + env(safe-area-inset-bottom)) 16px}
+
+/* ---------- top bar ---------- */
+.topbar{display:flex;align-items:center;gap:12px;padding:18px 2px 14px;position:sticky;top:0;z-index:20;
+  background:linear-gradient(var(--graphite) 72%,transparent)}
+.logo{display:flex;align-items:center;gap:11px}
+.logo .die{width:38px;height:38px;border-radius:10px;background:var(--bone);position:relative;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 6px 16px -6px rgba(0,0,0,.5);transform:rotate(-6deg)}
+.logo .die i{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--graphite)}
+.logo h1{font-size:22px;margin:0;letter-spacing:-.01em}
+.logo h1 b{color:var(--gold)}
+.logo .sub{font-size:11px;color:var(--bone-faint);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+
+/* ---------- nav (bottom on mobile) ---------- */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  background:linear-gradient(transparent,var(--graphite) 38%)}
+.nav-inner{display:flex;gap:6px;background:var(--graphite-2);border:1px solid var(--line);
+  border-radius:18px;padding:6px;box-shadow:var(--shadow)}
+.nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 18px;border-radius:13px;
+  color:var(--bone-dim);font-size:11px;font-weight:700;letter-spacing:.02em;transition:.18s}
+.nav button .ic{font-size:18px;line-height:1}
+.nav button.on{background:var(--slate);color:var(--bone)}
+.nav button.on .ic{filter:drop-shadow(0 0 8px var(--felt-glow))}
+
+/* ---------- buttons / chips ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;
+  padding:13px 18px;font-weight:700;font-size:15px;transition:.15s;border:1px solid transparent}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(180deg,#2EA874,var(--felt));color:#fff;
+  box-shadow:0 10px 24px -10px var(--felt),inset 0 1px 0 rgba(255,255,255,.18)}
+.btn-ghost{background:var(--slate);border-color:var(--line);color:var(--bone)}
+.btn-ghost:active{background:var(--slate-2)}
+.btn-brass{background:linear-gradient(180deg,var(--brass),var(--brass-deep));color:#241a07;
+  box-shadow:0 10px 24px -12px var(--brass)}
+.btn-danger{background:transparent;border-color:rgba(216,83,61,.45);color:var(--red)}
+.btn-block{width:100%}
+.btn-sm{padding:9px 13px;font-size:13px;border-radius:11px}
+
+.chip{padding:9px 14px;border-radius:11px;background:var(--slate);border:1px solid var(--line);
+  color:var(--bone-dim);font-weight:700;font-size:13px;transition:.15s}
+.chip.on{background:var(--felt-deep);border-color:#2EA874;color:#eafff4;box-shadow:0 0 0 1px var(--felt-glow)}
+.chip:active{transform:translateY(1px)}
+
+.card{background:linear-gradient(180deg,var(--graphite-2),var(--graphite-2));
+  border:1px solid var(--line-soft);border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+
+.eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-faint);font-weight:700}
+.h-sec{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-faint);font-weight:800;margin:26px 2px 12px}
+
+/* ---------- home ---------- */
+.hero{padding:14px 4px 6px}
+.hero h2{font-size:clamp(26px,7vw,40px);line-height:1.02;margin:6px 0 8px;letter-spacing:-.02em}
+.hero h2 em{font-style:normal;color:var(--gold)}
+.hero p{color:var(--bone-dim);max-width:48ch;margin:0 0 18px;font-size:15px;line-height:1.5}
+
+.game-card{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:10px;padding:12px 12px 12px 14px}
+.game-open{display:flex;align-items:center;gap:14px;flex:1;min-width:0;text-align:left;background:transparent}
+.icon-btn.del{flex:none;color:var(--bone-faint)}
+.icon-btn.del:active{background:var(--red-glow);border-color:rgba(216,83,61,.5);color:var(--red)}
+.game-card .meta{flex:1;min-width:0}
+.game-card .title{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px}
+.game-card .who{color:var(--bone-dim);font-size:13px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.game-card .lead{color:var(--gold);font-weight:800}
+.badge{font-size:11px;font-weight:800;letter-spacing:.04em;padding:4px 9px;border-radius:8px}
+.badge.live{background:var(--felt-deep);color:#cdfbe4}
+.badge.done{background:var(--slate);color:var(--bone-dim)}
+.badge.barrel{background:var(--brass-deep);color:#fff2db}
+
+.empty{text-align:center;padding:46px 18px;color:var(--bone-dim)}
+.empty .big{font-size:48px;margin-bottom:10px;opacity:.7}
+
+/* ---------- players editor ---------- */
+.player-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:13px;
+  background:var(--slate);border:1px solid var(--line);margin-bottom:8px}
+.player-row .pip{width:30px;height:30px;border-radius:8px;background:var(--bone);color:var(--graphite);
+  display:grid;place-items:center;font-weight:800;flex:none;font-size:14px}
+.player-row .nm{flex:1;font-weight:700}
+.icon-btn{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--bone-dim);
+  background:transparent;border:1px solid var(--line);font-size:16px}
+.icon-btn:active{background:var(--slate-2)}
+
+/* ---------- rules picker ---------- */
+.rule-block{margin-bottom:14px}
+.rule-block .lab{font-weight:800;font-size:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.rule-block .hint{font-weight:500;color:var(--bone-faint);font-size:12px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+
+/* ---------- scoreboard ---------- */
+.board-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 14px}
+.board-head .t{font-size:20px;font-weight:800;letter-spacing:-.01em}
+.turn-banner{display:flex;align-items:center;gap:10px;background:var(--graphite-2);border:1px solid var(--line-soft);
+  border-radius:14px;padding:10px 14px;margin-bottom:14px}
+.turn-banner .dot{width:9px;height:9px;border-radius:50%;background:#2EA874;box-shadow:0 0 0 4px var(--felt-glow)}
+.turn-banner b{color:var(--bone)}
+
+.table-wrap{overflow-x:auto;border:1px solid var(--line-soft);border-radius:18px;background:var(--graphite-2)}
+table.score{border-collapse:collapse;width:100%;min-width:min(100%,520px)}
+table.score th,table.score td{padding:0;text-align:center}
+table.score thead th{position:sticky;top:0;background:var(--graphite-2);padding:12px 8px 10px;
+  border-bottom:1px solid var(--line);z-index:2}
+.ph{display:flex;flex-direction:column;align-items:center;gap:5px}
+.ph .av{width:30px;height:30px;border-radius:8px;background:var(--bone);color:var(--graphite);display:grid;place-items:center;font-weight:800;font-size:13px}
+.ph .nm{font-weight:800;font-size:13px;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ph.lead .av{background:var(--gold);box-shadow:0 0 0 3px rgba(242,199,90,.18)}
+.col-idx{width:34px}
+.idx{color:var(--bone-faint);font-weight:700;font-size:12px;padding:0 4px}
+
+td.cell{border-bottom:1px solid var(--line-soft);border-left:1px solid var(--line-soft)}
+.cell-btn{width:100%;height:46px;display:grid;place-items:center;font-size:16px;font-weight:700;color:var(--bone);transition:.12s}
+.cell-btn:active{background:var(--slate)}
+.cell-btn.empty{color:var(--bone-faint);font-weight:500}
+.cell-btn.bust{color:var(--red)}
+.cell-btn.bust::after{content:'самосвал';position:absolute}
+.bust-tag{font-size:9px;color:var(--red);letter-spacing:.05em;margin-top:-3px}
+
+tr.pit-line td{border-bottom:2px dashed rgba(224,162,59,.4)}
+.pit-flag{font-size:10px;color:var(--brass);font-weight:800;letter-spacing:.06em;padding:3px 0}
+
+tfoot td{border-top:2px solid var(--line);padding:12px 6px 6px}
+.total{font-size:22px;font-weight:800;color:var(--bone)}
+.total.lead{color:var(--gold)}
+.status{font-size:11px;font-weight:800;margin-top:4px;letter-spacing:.03em;min-height:14px}
+.status.barrel{color:var(--brass)}
+.status.win{color:#3fd99a}
+.status.pit{color:var(--brass)}
+.barrel-cell{box-shadow:inset 0 0 0 2px rgba(224,162,59,.5),inset 0 18px 30px -22px var(--brass)}
+
+.board-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.kon-del{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;margin:0 auto;
+  background:var(--red-glow);border:1px solid rgba(216,83,61,.45);color:var(--red);font-size:13px;font-weight:800}
+.kon-del:active{background:var(--red);color:#fff}
+
+/* barrel callout */
+.barrel-callout{display:flex;align-items:center;gap:12px;background:linear-gradient(100deg,rgba(224,162,59,.14),rgba(224,162,59,.04));
+  border:1px solid rgba(224,162,59,.35);border-radius:16px;padding:12px 16px;margin:14px 0}
+.barrel-callout .keg{font-size:26px}
+.barrel-callout .txt{flex:1}
+.barrel-callout .txt .a{font-weight:800;color:var(--brass)}
+.barrel-callout .big{font-size:30px;color:var(--gold)}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(8,10,12,.66);backdrop-filter:blur(3px);
+  display:flex;align-items:flex-end;justify-content:center;padding:0;animation:fade .15s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{transform:translateY(28px);opacity:.4}to{transform:translateY(0);opacity:1}}
+.sheet{width:100%;max-width:560px;background:var(--graphite-2);border:1px solid var(--line);
+  border-radius:24px 24px 0 0;padding:14px 14px calc(16px + env(safe-area-inset-bottom));
+  box-shadow:0 -20px 60px -20px rgba(0,0,0,.7);animation:rise .2s cubic-bezier(.2,.8,.2,1);max-height:92vh;max-height:92dvh;
+  display:flex;flex-direction:column}
+@media(min-width:620px){.scrim{align-items:center}.sheet{border-radius:24px}}
+.grip{width:42px;height:5px;border-radius:3px;background:var(--line);margin:2px auto 12px;flex:none}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex:none}
+.sheet-head .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-faint);font-weight:800}
+.entry{flex:1;min-width:0;background:var(--graphite);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.entry .val{font-size:30px;font-weight:800}
+.entry .val.empty{color:var(--bone-faint)}
+.entry .tools{display:flex;gap:8px;flex:none}
+.entry .tools button{width:42px;height:42px;border-radius:11px;background:var(--slate);border:1px solid var(--line);
+  display:grid;place-items:center;font-size:17px;color:var(--bone)}
+.entry .tools button:active{background:var(--slate-2)}
+
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+.pad button{height:60px;border-radius:14px;background:var(--slate);border:1px solid var(--line);
+  font-size:23px;font-weight:700;color:var(--bone);transition:.1s}
+.pad button:active{background:var(--felt-deep);border-color:#2EA874}
+.pad button.util{background:var(--graphite);font-size:17px;color:var(--bone-dim)}
+.pad button.zero{grid-column:span 1}
+
+.quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.quick button{padding:9px 13px;border-radius:11px;background:var(--graphite);border:1px solid var(--line);
+  font-weight:700;font-size:14px;color:var(--bone-dim)}
+.quick button:active{background:var(--slate)}
+.quick button.bust{color:var(--red);border-color:rgba(216,83,61,.4)}
+
+/* keyboard */
+.kb{display:flex;flex-direction:column;gap:7px;margin-top:14px;overflow:auto}
+.kb-row{display:flex;gap:6px;justify-content:center}
+.kb button{flex:1;min-width:0;height:46px;border-radius:10px;background:var(--slate);border:1px solid var(--line);
+  font-size:16px;font-weight:600;color:var(--bone);transition:.08s}
+.kb button:active{background:var(--felt-deep)}
+.kb button.wide{flex:1.6}
+.kb button.util{background:var(--graphite);color:var(--bone-dim);font-size:13px;font-weight:700}
+.kb-tabs{display:flex;gap:6px;margin-top:10px}
+.kb-tabs button{flex:1;padding:8px;border-radius:10px;background:var(--graphite);border:1px solid var(--line);
+  font-weight:800;font-size:12px;color:var(--bone-dim)}
+.kb-tabs button.on{background:var(--slate);color:var(--bone)}
+
+.sheet-foot{display:flex;gap:10px;margin-top:14px;flex:none}
+
+/* ---------- rules page ---------- */
+.prose h3{font-size:16px;margin:22px 0 8px;color:var(--bone)}
+.prose p{color:var(--bone-dim);line-height:1.6;margin:8px 0;font-size:14px}
+.prose .tag{color:var(--gold);font-weight:700}
+.rtable{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+.rtable td{padding:9px 10px;border-bottom:1px solid var(--line-soft)}
+.rtable td:last-child{text-align:right;font-weight:800;color:var(--bone)}
+.active-rules{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px}
+
+/* ---------- stats ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:8px}
+.stat{background:var(--graphite-2);border:1px solid var(--line-soft);border-radius:16px;padding:14px}
+.stat .n{font-size:30px;font-weight:800}
+.stat .l{font-size:12px;color:var(--bone-faint);font-weight:700;margin-top:2px;letter-spacing:.02em}
+.lb-row{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line-soft)}
+.lb-row .rk{width:24px;color:var(--bone-faint);font-weight:800;text-align:center}
+.lb-row .nm{flex:1;font-weight:700}
+.lb-row .vals{display:flex;gap:14px;font-size:13px;color:var(--bone-dim)}
+.lb-row .vals b{color:var(--bone)}
+
+.subnav{display:flex;gap:8px;margin:2px 0 16px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--slate);border:1px solid var(--line);border-radius:12px;padding:11px 18px;font-weight:700;
+  font-size:14px;z-index:60;box-shadow:var(--shadow);animation:rise .2s}
+.back{display:inline-flex;align-items:center;gap:7px;color:var(--bone-dim);font-weight:700;font-size:14px;
+  padding:8px 2px;margin:2px 0 6px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+/* ============================== storage ============================== */
+// localStorage with safe in-memory fallback (so it also runs in sandboxes)
+const mem = {};
+const store = (() => {
+  let ok = false;
+  try { const k='__z'; localStorage.setItem(k,'1'); localStorage.removeItem(k); ok=true; } catch(e){ ok=false; }
+  return {
+    get(k){ try{ return ok ? localStorage.getItem(k) : (mem[k] ?? null);}catch(e){return mem[k]??null;} },
+    set(k,v){ try{ ok ? localStorage.setItem(k,v) : (mem[k]=v);}catch(e){mem[k]=v;} },
+  };
+})();
+const DB_KEY = '1kzariki:db:v1';
+const loadDB = () => { try { return JSON.parse(store.get(DB_KEY)) || {games:[]}; } catch(e){ return {games:[]}; } };
+const saveDB = (db) => store.set(DB_KEY, JSON.stringify(db));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ============================== rules ============================== */
+const DEFAULT_RULES = {
+  target:1000, barrelAt:880, scale:'classic',
+  exact:true, pits:true, samosval:0, bolt3:-100, overtake:-50, entry:120, entryMode:'once', confirm:true,
+};
+const PRESETS = {
+  'Классика':   { target:1000, barrelAt:880, scale:'classic', exact:true,  pits:true,  samosval:0,    bolt3:-100, overtake:-50,  entry:120, entryMode:'once', confirm:true },
+  'Дворовая':   { target:1000, barrelAt:850, scale:'classic', exact:true,  pits:true,  samosval:0,    bolt3:-100, overtake:-100, entry:120, entryMode:'each', confirm:true },
+  'Быстрая':    { target:1000, barrelAt:880, scale:'fast',    exact:false, pits:false, samosval:0,    bolt3:0,    overtake:0,    entry:0,   entryMode:'once', confirm:false },
+  'Без бочки':  { target:1000, barrelAt:1000,scale:'classic', exact:false, pits:false, samosval:0,    bolt3:0,    overtake:-50,  entry:0,   entryMode:'once', confirm:false },
+};
+const QUICK = { classic:[5,10,15,20,25,30,40,50,100], fast:[50,100,150,200,250,300,500] };
+const PIT_LINES = [300,600];
+
+/* ============================== game math ============================== */
+function totalsFor(game){
+  // chronological simulator: entry gate + per-bust + 3-bolt + overtake penalties.
+  const R = game.rules;
+  const threshold = R.entry || 0;
+  const reentry = threshold > 0 && R.entryMode === 'each'; // <120 wipes to zero, re-enter each time
+  const out = {};
+  const boltRun = {};
+  game.players.forEach(p => { out[p.id] = {total:0,busts:0,best:0,penalties:0,opened:false,everBarrel:false}; boltRun[p.id]=0; });
+
+  game.turns.forEach(t => {
+    game.players.forEach(p => {
+      const v = t.scores[p.id];
+      if (v === null || v === undefined) return;
+      const s = out[p.id];
+
+      if (reentry){
+        // every кон must clear the threshold; a smaller one resets you to zero
+        if (v >= threshold){
+          s.opened = true;
+          s.total += v;
+          if (v > s.best) s.best = v;
+        } else {
+          if (v === 0) s.busts++;
+          s.total = 0; s.opened = false; boltRun[p.id] = 0;
+        }
+      } else {
+        // entry gate once: until you score >= threshold, nothing is written; once in, stay in
+        if (!s.opened){
+          if (threshold > 0 && v < threshold) return;
+          s.opened = true;
+        }
+        s.total += v;
+        if (v > s.best) s.best = v;
+        if (v === 0){
+          s.busts++;
+          boltRun[p.id]++;
+          if (R.samosval){ s.total += R.samosval; s.penalties += (-R.samosval); }
+          if (R.bolt3 && boltRun[p.id] >= 3){ s.total += R.bolt3; s.penalties += (-R.bolt3); boltRun[p.id] = 0; }
+        } else {
+          boltRun[p.id] = 0;
+        }
+      }
+
+      if (R.barrelAt < R.target && s.total >= R.barrelAt && s.total < R.target) s.everBarrel = true;
+      // overtake: landing exactly on an opponent's total knocks them back
+      if (R.overtake){
+        game.players.forEach(q => {
+          if (q.id === p.id) return;
+          const os = out[q.id];
+          if (!os.opened || os.total <= 0) return;
+          if (os.total === s.total){ os.total += R.overtake; os.penalties += (-R.overtake); }
+        });
+      }
+    });
+  });
+
+  game.players.forEach(p => {
+    const s = out[p.id];
+    s.onBarrel = R.barrelAt < R.target && s.total >= R.barrelAt && s.total < R.target;
+    s.remaining = R.target - s.total;
+    s.won = R.exact ? s.total === R.target : s.total >= R.target;
+    s.over = R.exact && s.total > R.target;
+    s.pit = R.pits ? PIT_LINES.find(l => s.total >= l - 100 && s.total < l) : null;
+    s.needEntry = (threshold > 0 && !s.opened) ? threshold : 0;
+  });
+  return out;
+}
+function leaderId(game, tot){
+  let id=null, mx=-1;
+  game.players.forEach(p => { const t = tot[p.id].total; if (t>mx){mx=t;id=p.id;} });
+  return mx>0 ? id : null;
+}
+function winnerId(game, tot){
+  const w = game.players.find(p => tot[p.id].won);
+  return w ? w.id : null;
+}
+
+/* ============================== stats ============================== */
+function aggregate(db){
+  const by = {}; // by normalized name
+  const norm = n => n.trim().toLowerCase();
+  const ensure = n => { const k=norm(n); if(!by[k]) by[k]={name:n,wins:0,games:0,barrels:0,busts:0,best:0,points:0}; return by[k]; };
+  let totalGames=0, totalBarrels=0, totalBusts=0;
+  db.games.forEach(g => {
+    const tot = totalsFor(g);
+    const w = winnerId(g, tot);
+    g.players.forEach(p => {
+      const e = ensure(p.name); e.games++;
+      const s = tot[p.id];
+      e.busts += s.busts; totalBusts += s.busts;
+      if (s.best > e.best) e.best = s.best;
+      e.points += s.total;
+      if (s.everBarrel){ e.barrels++; totalBarrels++; }
+    });
+    if (w){ ensure(g.players.find(p=>p.id===w).name).wins++; }
+    totalGames++;
+  });
+  const board = Object.values(by).sort((a,b)=> b.wins-a.wins || b.points-a.points);
+  return { board, totalGames, totalBarrels, totalBusts };
+}
+
+/* ============================== dice pip helper ============================== */
+const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function DieLogo(){
+  return (
+    <div className="die">
+      {[1,7,3].map((g,i)=>(<i key={i} style={{
+        left:[8,8,24][i]+'px', top:[8,24,16][i]+'px'
+      }}/>))}
+    </div>
+  );
+}
+
+/* ============================== modals ============================== */
+function Sheet({label, children, onClose}){
+  return (
+    <div className="scrim" onMouseDown={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div className="sheet">
+        <div className="grip"/>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function NumberModal({title, initial, scale, allowBust, onSave, onClose, onDelete}){
+  const [val, setVal] = useState(initial===null||initial===undefined ? '' : String(initial));
+  const push = d => setVal(v => (v==='0'?d: (v+d)).slice(0,4));
+  const back = () => setVal(v => v.slice(0,-1));
+  const clear = () => setVal('');
+  const commit = n => onSave(n);
+  return (
+    <Sheet onClose={onClose}>
+      <div className="sheet-head">
+        <span className="lbl">{title}</span>
+        {onDelete && <button className="btn btn-danger btn-sm" onClick={onDelete}>Очистить ход</button>}
+      </div>
+      <div className="entry">
+        <span className={"val num "+(val===''?'empty':'')}>{val===''?'0':val}</span>
+        <div className="tools">
+          <button onClick={back} aria-label="Стереть символ">⌫</button>
+          <button onClick={clear} aria-label="Очистить">✕</button>
+        </div>
+      </div>
+      <div className="quick">
+        {QUICK[scale].map(q=>(<button key={q} onClick={()=>setVal(String(q))}>{q}</button>))}
+        {allowBust && <button className="bust" onClick={()=>commit(0)}>Самосвал · 0</button>}
+      </div>
+      <div className="pad">
+        {[1,2,3,4,5,6,7,8,9].map(n=>(<button key={n} onClick={()=>push(String(n))}>{n}</button>))}
+        <button className="util" onClick={clear}>C</button>
+        <button onClick={()=>push('0')}>0</button>
+        <button className="util" onClick={back}>⌫</button>
+      </div>
+      <div className="sheet-foot">
+        <button className="btn btn-ghost" style={{flex:'none'}} onClick={onClose}>Отмена</button>
+        <button className="btn btn-primary btn-block" onClick={()=>commit(val===''?0:parseInt(val,10))}>Записать</button>
+      </div>
+    </Sheet>
+  );
+}
+
+const RU = [['й','ц','у','к','е','н','г','ш','щ','з','х'],['ф','ы','в','а','п','р','о','л','д','ж','э'],['я','ч','с','м','и','т','ь','б','ю','ъ','ё']];
+const EN = [['q','w','e','r','t','y','u','i','o','p'],['a','s','d','f','g','h','j','k','l'],['z','x','c','v','b','n','m']];
+const DIG = [['1','2','3','4','5'],['6','7','8','9','0']];
+function KeyboardModal({title, initial, onSave, onClose}){
+  const [val, setVal] = useState(initial||'');
+  const [lay, setLay] = useState('ru');
+  const [caps, setCaps] = useState(true);
+  const rows = lay==='ru'?RU : lay==='en'?EN : DIG;
+  const type = ch => setVal(v => (v + (caps?ch.toUpperCase():ch)).slice(0,24));
+  return (
+    <Sheet onClose={onClose}>
+      <div className="sheet-head"><span className="lbl">{title}</span></div>
+      <div className="entry">
+        <span className={"val "+(val===''?'empty':'')}>{val===''?'Игрок':val}</span>
+        <div className="tools">
+          <button onClick={()=>setVal(v=>v.slice(0,-1))} aria-label="Стереть символ">⌫</button>
+          <button onClick={()=>setVal('')} aria-label="Очистить">✕</button>
+        </div>
+      </div>
+      <div className="kb-tabs">
+        {[['ru','АБВ'],['en','ABC'],['dig','123']].map(([k,t])=>(
+          <button key={k} className={lay===k?'on':''} onClick={()=>setLay(k)}>{t}</button>
+        ))}
+      </div>
+      <div className="kb">
+        {rows.map((r,i)=>(
+          <div className="kb-row" key={i}>
+            {i===rows.length-1 && lay!=='dig' && <button className="util" onClick={()=>setCaps(c=>!c)} style={{flex:'.9'}}>{caps?'⇧':'⇪'}</button>}
+            {r.map(ch=>(<button key={ch} onClick={()=>type(ch)}>{caps&&lay!=='dig'?ch.toUpperCase():ch}</button>))}
+            {i===rows.length-1 && lay!=='dig' && <button className="util" onClick={()=>setVal(v=>v.slice(0,-1))} style={{flex:'.9'}}>⌫</button>}
+          </div>
+        ))}
+        <div className="kb-row">
+          <button className="wide" onClick={()=>type(' ')} style={{flex:'3'}}>пробел</button>
+          <button className="util" onClick={()=>setVal('')}>стереть всё</button>
+        </div>
+      </div>
+      <div className="sheet-foot">
+        <button className="btn btn-ghost" style={{flex:'none'}} onClick={onClose}>Отмена</button>
+        <button className="btn btn-primary btn-block" onClick={()=>onSave(val.trim())}>Готово</button>
+      </div>
+    </Sheet>
+  );
+}
+
+function ConfirmModal({title, message, confirmLabel, onConfirm, onClose}){
+  return (
+    <Sheet onClose={onClose}>
+      <div className="sheet-head"><span className="lbl">{title}</span></div>
+      <p style={{color:'var(--bone-dim)',fontSize:15,lineHeight:1.5,margin:'2px 2px 6px'}}>{message}</p>
+      <div className="sheet-foot">
+        <button className="btn btn-ghost" style={{flex:'none'}} onClick={onClose}>Отмена</button>
+        <button className="btn btn-block" style={{background:'var(--red)',color:'#fff'}} onClick={onConfirm}>{confirmLabel||'Удалить'}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+/* ============================== home ============================== */
+function Home({db, go}){
+  const [del, setDel] = useState(null);
+  const games = [...db.games].sort((a,b)=> (b.updatedAt||0)-(a.updatedAt||0));
+  const delGame = del ? db.games.find(g=>g.id===del) : null;
+  return (
+    <div>
+      <div className="hero">
+        <span className="eyebrow">1000 на кубиках · счёт без бумажки</span>
+        <h2>Кидай <em>зарики</em>,<br/>а счёт веду я.</h2>
+        <p>Заводи партию, добавляй игроков и щёлкай очки за каждый кон. Бочка, ямы и самосвалы подсветятся сами.</p>
+        <button className="btn btn-primary" onClick={()=>go({name:'new'})}>+ Новая партия</button>
+      </div>
+      <div className="h-sec">Партии</div>
+      {games.length===0 ? (
+        <div className="empty"><div className="big">🎲</div>Партий пока нет.<br/>Заведи первую — и понеслась.</div>
+      ) : games.map(g=>{
+        const tot = totalsFor(g);
+        const lead = leaderId(g, tot);
+        const win = winnerId(g, tot);
+        const anyBarrel = g.players.some(p=>tot[p.id].onBarrel);
+        return (
+          <div key={g.id} className="card game-card">
+            <button className="game-open" onClick={()=>go({name:'game',id:g.id})}>
+              <DieLogo/>
+              <div className="meta">
+                <div className="title">{g.name}
+                  {win ? <span className="badge done">партия сыграна</span>
+                   : anyBarrel ? <span className="badge barrel">на бочке</span>
+                   : <span className="badge live">идёт</span>}
+                </div>
+                <div className="who">{g.players.map(p=>p.name).join(' · ')}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                {lead && <div className="lead num">{tot[lead].total}</div>}
+                {lead && <div style={{fontSize:12,color:'var(--bone-faint)'}}>{g.players.find(p=>p.id===lead).name}</div>}
+              </div>
+            </button>
+            <button className="icon-btn del" onClick={()=>setDel(g.id)} aria-label="Удалить партию">🗑</button>
+          </div>
+        );
+      })}
+      {delGame && <ConfirmModal title="Удалить партию"
+        message={`«${delGame.name}» и весь её счёт удалятся без возврата.`}
+        onClose={()=>setDel(null)}
+        onConfirm={()=>{ go({name:'delete', id:del}); setDel(null); }}/>}
+    </div>
+  );
+}
+
+/* ============================== new game ============================== */
+function NewGame({onCreate, go}){
+  const [players, setPlayers] = useState(()=>[{id:uid(),name:'Игрок 1'},{id:uid(),name:'Игрок 2'}]);
+  const [rules, setRules] = useState({...DEFAULT_RULES});
+  const [preset, setPreset] = useState('Классика');
+  const [kb, setKb] = useState(null); // {id} editing name
+  const setRule = (k,v)=>{ setRules(r=>({...r,[k]:v})); setPreset(null); };
+  const applyPreset = name => { setPreset(name); setRules({...PRESETS[name]}); };
+  const addPlayer = () => setPlayers(p=>[...p,{id:uid(),name:'Игрок '+(p.length+1)}]);
+  const editing = kb ? players.find(p=>p.id===kb) : null;
+
+  return (
+    <div>
+      <button className="back" onClick={()=>go({name:'home'})}>‹ К партиям</button>
+      <h2 style={{fontSize:24,margin:'2px 0 14px'}}>Новая партия</h2>
+
+      <div className="h-sec" style={{marginTop:8}}>Игроки</div>
+      {players.map((p,i)=>(
+        <div className="player-row" key={p.id}>
+          <span className="pip">{i+1}</span>
+          <button className="nm" style={{textAlign:'left'}} onClick={()=>setKb(p.id)}>{p.name}</button>
+          <button className="icon-btn" onClick={()=>setKb(p.id)}>✎</button>
+          {players.length>2 && <button className="icon-btn" onClick={()=>setPlayers(ps=>ps.filter(x=>x.id!==p.id))}>✕</button>}
+        </div>
+      ))}
+      <button className="btn btn-ghost btn-block btn-sm" onClick={addPlayer}>+ Добавить игрока</button>
+
+      <div className="h-sec">Правила</div>
+      <div className="opts" style={{marginBottom:16}}>
+        {Object.keys(PRESETS).map(name=>(
+          <button key={name} className={"chip "+(preset===name?'on':'')} onClick={()=>applyPreset(name)}>{name}</button>
+        ))}
+      </div>
+
+      <div className="card">
+        <RuleRow label="Цель" hint="до скольки играем">
+          {[1000].map(t=>(<button key={t} className={"chip on"}>{t}</button>))}
+        </RuleRow>
+        <RuleRow label="Бочка" hint="с какой отметки закрываемся">
+          {[850,880,1000].map(v=>(
+            <button key={v} className={"chip "+(rules.barrelAt===v?'on':'')} onClick={()=>setRule('barrelAt',v)}>
+              {v===1000?'без бочки':v}
+            </button>
+          ))}
+        </RuleRow>
+        <RuleRow label="Шкала очков" hint="как считаем кости">
+          {[['classic','1=10, 5=5'],['fast','1=100, 5=50']].map(([k,t])=>(
+            <button key={k} className={"chip "+(rules.scale===k?'on':'')} onClick={()=>setRule('scale',k)}>{t}</button>
+          ))}
+        </RuleRow>
+        <RuleRow label="Ровно 1000" hint="перебор не засчитывается">
+          {[['да',true],['не важно',false]].map(([t,v])=>(
+            <button key={t} className={"chip "+(rules.exact===v?'on':'')} onClick={()=>setRule('exact',v)}>{t}</button>
+          ))}
+        </RuleRow>
+        <RuleRow label="Ямы" hint="300 и 600 — выбираться за ход">
+          {[['включить',true],['выключить',false]].map(([t,v])=>(
+            <button key={t} className={"chip "+(rules.pits===v?'on':'')} onClick={()=>setRule('pits',v)}>{t}</button>
+          ))}
+        </RuleRow>
+        <RuleRow label="Штраф за самосвал" hint="за каждый кон в ноль">
+          {[0,-50,-100].map(v=>(
+            <button key={v} className={"chip "+(rules.samosval===v?'on':'')} onClick={()=>setRule('samosval',v)}>{v===0?'нет':v}</button>
+          ))}
+        </RuleRow>
+        <RuleRow label="3 болта подряд" hint="три самосвала кряду — штраф">
+          {[0,-50,-100].map(v=>(
+            <button key={v} className={"chip "+(rules.bolt3===v?'on':'')} onClick={()=>setRule('bolt3',v)}>{v===0?'нет':v}</button>
+          ))}
+        </RuleRow>
+        <RuleRow label="Обгон" hint="догнал в точку — соперник в минус">
+          {[0,-50,-100].map(v=>(
+            <button key={v} className={"chip "+(rules.overtake===v?'on':'')} onClick={()=>setRule('overtake',v)}>{v===0?'нет':v}</button>
+          ))}
+        </RuleRow>
+        <RuleRow label="Порог входа" hint="зайти в игру — набрать за кон">
+          {[0,100,120].map(v=>(
+            <button key={v} className={"chip "+(rules.entry===v?'on':'')} onClick={()=>setRule('entry',v)}>{v===0?'без':'от '+v}</button>
+          ))}
+        </RuleRow>
+        {rules.entry>0 && (
+        <RuleRow label="Режим входа" hint="что делать с коном меньше порога">
+          {[['once','1 заход'],['each','каждый раз']].map(([k,t])=>(
+            <button key={k} className={"chip "+(rules.entryMode===k?'on':'')} onClick={()=>setRule('entryMode',k)}>{t}</button>
+          ))}
+        </RuleRow>
+        )}
+      </div>
+
+      <button className="btn btn-primary btn-block" style={{marginTop:18}} onClick={()=>onCreate(players,rules)}>
+        Поехали 🎲
+      </button>
+
+      {kb && <KeyboardModal title="Имя игрока" initial={editing.name}
+        onClose={()=>setKb(null)}
+        onSave={name=>{ setPlayers(ps=>ps.map(x=>x.id===kb?{...x,name:name||x.name}:x)); setKb(null); }}/>}
+    </div>
+  );
+}
+function RuleRow({label,hint,children}){
+  return (<div className="rule-block">
+    <div className="lab"><span>{label}</span><span className="hint">{hint}</span></div>
+    <div className="opts">{children}</div>
+  </div>);
+}
+
+/* ============================== game board ============================== */
+function GameBoard({game, update, go, toast}){
+  const [edit, setEdit] = useState(null); // {turnIdx, playerId}
+  const [editMode, setEditMode] = useState(false); // toggle row-delete affordances
+  const [delTurn, setDelTurn] = useState(null); // turn index pending delete
+  const tot = useMemo(()=>totalsFor(game),[game]);
+  const lead = leaderId(game, tot);
+  const win = winnerId(game, tot);
+  const R = game.rules;
+
+  // current player = next in rotation by who has fewest filled this turn-row
+  const lastRow = game.turns[game.turns.length-1];
+  const nextPlayer = useMemo(()=>{
+    if (win) return null;
+    if (!lastRow) return game.players[0];
+    const empty = game.players.find(p => lastRow.scores[p.id]===null);
+    return empty || game.players[0];
+  },[game,win,lastRow]);
+
+  const barrelPlayers = game.players.filter(p=>tot[p.id].onBarrel);
+
+  const addTurn = () => {
+    const scores = {}; game.players.forEach(p=>scores[p.id]=null);
+    update({...game, turns:[...game.turns,{id:uid(),scores}]});
+  };
+  const setScore = (turnIdx, playerId, value) => {
+    const turns = game.turns.map((t,i)=> i===turnIdx ? {...t,scores:{...t.scores,[playerId]:value}} : t);
+    update({...game, turns});
+    setEdit(null);
+  };
+  const openCell = (turnIdx, playerId) => setEdit({turnIdx,playerId});
+  const deleteTurn = (idx) => { update({...game, turns:game.turns.filter((_,i)=>i!==idx)}); setDelTurn(null); };
+  const quickAddTurnAndOpen = (playerId) => {
+    // ensure there is a row with an empty slot for this player
+    let idx = game.turns.findIndex(t=>t.scores[playerId]===null);
+    if (idx===-1){ const scores={}; game.players.forEach(p=>scores[p.id]=null);
+      const turns=[...game.turns,{id:uid(),scores}]; update({...game,turns}); idx=turns.length-1; }
+    setEdit({turnIdx:idx, playerId});
+  };
+
+  return (
+    <div>
+      <button className="back" onClick={()=>go({name:'home'})}>‹ К партиям</button>
+      <div className="board-head">
+        <div className="t">{game.name}</div>
+        <button className="btn btn-ghost btn-sm" onClick={()=>go({name:'rules', id:game.id})}>Правила</button>
+      </div>
+
+      {win ? (
+        <div className="barrel-callout" style={{borderColor:'rgba(63,217,154,.4)',background:'linear-gradient(100deg,rgba(63,217,154,.12),transparent)'}}>
+          <span className="keg">🏆</span>
+          <div className="txt"><span className="a" style={{color:'#3fd99a'}}>Партия сыграна!</span><div>Победил {game.players.find(p=>p.id===win).name}</div></div>
+        </div>
+      ) : nextPlayer && (
+        <div className="turn-banner"><span className="dot"/><span>Ход: <b>{nextPlayer.name}</b></span></div>
+      )}
+
+      {!win && barrelPlayers.map(p=>(
+        <div className="barrel-callout" key={p.id}>
+          <span className="keg">🛢️</span>
+          <div className="txt"><span className="a">{p.name} на бочке</span><div style={{color:'var(--bone-dim)',fontSize:13}}>закрыться за один ход</div></div>
+          <div className="big num chalk">−{tot[p.id].remaining}</div>
+        </div>
+      ))}
+
+      <div className="table-wrap">
+        <table className="score">
+          <thead>
+            <tr>
+              <th className="col-idx"><span className="idx">кон</span></th>
+              {game.players.map(p=>(
+                <th key={p.id}>
+                  <div className={"ph "+(lead===p.id?'lead':'')}>
+                    <div className="av">{lead===p.id?'♛':p.name.slice(0,1).toUpperCase()}</div>
+                    <div className="nm">{p.name}</div>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {game.turns.length===0 && (
+              <tr><td className="col-idx"><span className="idx">1</span></td>
+                {game.players.map(p=>(<td className="cell" key={p.id}><button className="cell-btn empty" onClick={()=>quickAddTurnAndOpen(p.id)}>+</button></td>))}
+              </tr>
+            )}
+            {game.turns.map((t,ti)=>{
+              // running totals up to this row, to place pit markers
+              return (
+                <tr key={t.id}>
+                  <td className="col-idx">
+                    {editMode
+                      ? <button className="kon-del" onClick={()=>setDelTurn(ti)} aria-label={"Удалить кон "+(ti+1)}>✕</button>
+                      : <span className="idx">{ti+1}</span>}
+                  </td>
+                  {game.players.map(p=>{
+                    const v = t.scores[p.id];
+                    const isBust = v===0;
+                    return (
+                      <td className="cell" key={p.id}>
+                        <button className={"cell-btn "+(v===null?'empty ':'')+(isBust?'bust':'')}
+                          onClick={()=>openCell(ti,p.id)} style={{position:'relative'}}>
+                          {v===null ? '·' : isBust ? <span>0<div className="bust-tag">самосвал</div></span> : <span className="num">{v}</span>}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td className="col-idx"><span className="chalk" style={{fontSize:18,color:'var(--bone-faint)'}}>Σ</span></td>
+              {game.players.map(p=>{
+                const s = tot[p.id];
+                const isLead = lead===p.id;
+                return (
+                  <td key={p.id} className={s.onBarrel?'barrel-cell':''}>
+                    <div className={"total "+(isLead?'lead':'')}>{s.total}</div>
+                    <div className={"status "+(s.won?'win':s.needEntry?'barrel':s.onBarrel?'barrel':s.pit?'pit':'')}>
+                      {s.won ? '✓ закрыл' : s.over ? 'перебор' : s.needEntry ? '🚪 зайти от '+s.needEntry : s.onBarrel ? '🛢 −'+s.remaining : s.pit ? '🕳 яма '+s.pit : ''}
+                    </div>
+                    {s.penalties>0 && <div className="status" style={{color:'var(--red)'}}>штраф −{s.penalties}</div>}
+                  </td>
+                );
+              })}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div className="board-actions">
+        <button className="btn btn-primary" onClick={addTurn} disabled={!!win} style={win?{opacity:.45}:{}}>+ Новый кон</button>
+        {game.turns.length>0 && (
+          <button className={"btn btn-sm "+(editMode?'btn-brass':'btn-ghost')} onClick={()=>setEditMode(m=>!m)}>
+            {editMode?'Готово':'Править коны'}
+          </button>
+        )}
+      </div>
+
+      {delTurn!==null && (
+        <ConfirmModal title={"Удалить кон "+(delTurn+1)}
+          message="Этот кон и очки всех игроков в нём сотрутся. Итоги пересчитаются."
+          onClose={()=>setDelTurn(null)}
+          onConfirm={()=>deleteTurn(delTurn)}/>
+      )}
+
+      {edit && (()=>{
+        const v = game.turns[edit.turnIdx].scores[edit.playerId];
+        const pl = game.players.find(p=>p.id===edit.playerId);
+        return <NumberModal
+          title={pl.name + ' · кон ' + (edit.turnIdx+1)}
+          initial={v} scale={R.scale} allowBust={true}
+          onClose={()=>setEdit(null)}
+          onDelete={v!==null ? ()=>setScore(edit.turnIdx, edit.playerId, null) : null}
+          onSave={n=>setScore(edit.turnIdx, edit.playerId, n)}
+        />;
+      })()}
+    </div>
+  );
+}
+
+/* ============================== rules page ============================== */
+function RulesPage({game, go}){
+  const R = game ? game.rules : DEFAULT_RULES;
+  const classic = R.scale==='classic';
+  return (
+    <div>
+      {game && <button className="back" onClick={()=>go({name:'game',id:game.id})}>‹ К партии</button>}
+      <h2 style={{fontSize:24,margin:'2px 0 6px'}}>Правила · 1000 на кубиках</h2>
+      {game && <>
+        <span className="eyebrow">в этой партии</span>
+        <div className="active-rules">
+          <span className="chip on">бочка {R.barrelAt===1000?'выкл':R.barrelAt}</span>
+          <span className="chip on">{classic?'1=10, 5=5':'1=100, 5=50'}</span>
+          <span className="chip on">{R.exact?'ровно 1000':'≥1000'}</span>
+          {R.pits && <span className="chip on">ямы 300/600</span>}
+          {R.samosval!==0 && <span className="chip on">самосвал {R.samosval}</span>}
+          {R.bolt3!==0 && <span className="chip on">3 болта {R.bolt3}</span>}
+          {R.overtake!==0 && <span className="chip on">обгон {R.overtake}</span>}
+          {R.entry!==0 && <span className="chip on">вход от {R.entry}</span>}
+          {R.entry!==0 && R.entryMode==='each' && <span className="chip on">вход каждый раз</span>}
+        </div>
+      </>}
+
+      <div className="prose card" style={{marginTop:14}}>
+        <h3>Что нужно</h3>
+        <p>5 кубиков, от 2 игроков. Цель — первым набрать <span className="tag">{R.exact?'ровно 1000':'1000'}</span>. Очерёдность — бросок одного кубика, у кого больше, тот первый.</p>
+
+        <h3>Подсчёт очков</h3>
+        <p>Зачётные грани сами по себе — только <span className="tag">1</span> и <span className="tag">5</span>. Тройки одинаковых считаются по номиналу.</p>
+        <table className="rtable">
+          <tbody>
+            <tr><td>Одна единица</td><td className="num">{classic?'10':'100'}</td></tr>
+            <tr><td>Одна пятёрка</td><td className="num">{classic?'5':'50'}</td></tr>
+            <tr><td>Три двойки / тройки / …</td><td className="num">{classic?'20 / 30 / …':'×100'}</td></tr>
+            <tr><td>Три единицы</td><td className="num">{classic?'100':'1000'}</td></tr>
+            <tr><td>Четыре одинаковых</td><td>удваивает тройку</td></tr>
+            <tr><td>Пять единиц</td><td className="num">сразу победа</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Ход</h3>
+        <p>Бросаешь все 5 кубиков. Откладываешь зачётные, остальные перебрасываешь, добирая очки. Хочешь — записываешь сумму кона; нет ни одной зачётной кости — <span className="tag">самосвал</span>, очки кона сгорают{R.samosval?` (штраф ${R.samosval})`:''}.</p>
+
+        {R.entry!==0 && <><h3>Вход в игру</h3>
+        <p>Чтобы открыться, нужно набрать <span className="tag">от {R.entry}</span> за один кон. Пока не зашёл — очки не пишутся.</p>
+        {R.entryMode==='each'
+          ? <p>Режим <span className="tag">каждый раз</span>: любой кон меньше {R.entry} обнуляет твой счёт — заходишь заново. Долгая, нервная партия.</p>
+          : <p>Режим <span className="tag">1 заход</span>: зашёл один раз — и ты в игре до конца, хоть в минус уходи.</p>}
+        </>}
+
+        {R.bolt3!==0 && <><h3>Три болта подряд</h3>
+        <p>Три самосвала кряду — штраф <span className="tag">{R.bolt3}</span>, счётчик болтов обнуляется.</p></>}
+
+        <h3>Бочка</h3>
+        <p>На отметке <span className="tag">{R.barrelAt===1000?'(в этой партии выключена)':R.barrelAt}</span> счёт замораживается — нужно за один ход добрать ровно до 1000{R.barrelAt<1000?` (это ${1000-R.barrelAt})`:''}. На бочке только один игрок; залез второй — первый слетает{R.samosval?` (штраф ${R.samosval})`:''}.</p>
+
+        {R.pits && <><h3>Ямы</h3><p>Пороги 300 и 600 — попал, выбираешься за один ход.</p></>}
+        {R.overtake!==0 && <><h3>Обгон</h3><p>Догнал соперника точно в его счёт — он откатывается на <span className="tag">{R.overtake}</span>.</p></>}
+        <h3>Перебор</h3>
+        <p>{R.exact ? 'Нужно ровно 1000 — вылез выше, не засчитывается. На 950+ умнее остановиться.' : 'Достаточно набрать 1000 или больше.'}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== stats ============================== */
+function Stats({db, go}){
+  const agg = useMemo(()=>aggregate(db),[db]);
+  if (db.games.length===0) return (
+    <div><h2 style={{fontSize:24,margin:'2px 0 14px'}}>Статистика</h2>
+      <div className="empty"><div className="big">📊</div>Сыграй хотя бы одну партию —<br/>и здесь появятся цифры.</div></div>
+  );
+  return (
+    <div>
+      <h2 style={{fontSize:24,margin:'2px 0 14px'}}>Статистика</h2>
+      <div className="stat-grid">
+        <div className="stat"><div className="n num">{agg.totalGames}</div><div className="l">партий</div></div>
+        <div className="stat"><div className="n num" style={{color:'var(--brass)'}}>{agg.totalBarrels}</div><div className="l">выходов на бочку</div></div>
+        <div className="stat"><div className="n num" style={{color:'var(--red)'}}>{agg.totalBusts}</div><div className="l">самосвалов</div></div>
+      </div>
+      <div className="h-sec">Зал славы</div>
+      <div className="card" style={{padding:'6px 16px'}}>
+        {agg.board.map((p,i)=>(
+          <div className="lb-row" key={p.name+i}>
+            <span className="rk">{i===0?'👑':i+1}</span>
+            <span className="nm">{p.name}</span>
+            <div className="vals">
+              <span>побед <b className="num">{p.wins}</b></span>
+              <span>бочек <b className="num">{p.barrels}</b></span>
+              <span>самосв. <b className="num">{p.busts}</b></span>
+              <span>рекорд <b className="num">{p.best}</b></span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== sync (frontend-only, GitHub Gist) ============================== */
+// Mirrors the VSCodeSyncFiles idea: one remote blob, a token in local storage, push/pull.
+const SyncCfg = {
+  get(){ try{return JSON.parse(store.get('1kzariki:sync')||'{}');}catch(e){return {};} },
+  set(c){ store.set('1kzariki:sync', JSON.stringify(c)); },
+};
+async function gistPush(db){
+  const c = SyncCfg.get();
+  if(!c.token) throw new Error('Нет токена');
+  const body = { description:'1kzariki-sync', public:false, files:{ '1kzariki.json':{content:JSON.stringify(db)} } };
+  const url = c.gistId ? `https://api.github.com/gists/${c.gistId}` : 'https://api.github.com/gists';
+  const r = await fetch(url,{ method:c.gistId?'PATCH':'POST',
+    headers:{Authorization:'token '+c.token,'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  const j = await r.json(); SyncCfg.set({...c, gistId:j.id}); return j.id;
+}
+async function gistPull(){
+  const c = SyncCfg.get();
+  if(!c.token||!c.gistId) throw new Error('Нет токена или gist');
+  const r = await fetch(`https://api.github.com/gists/${c.gistId}`,{headers:{Authorization:'token '+c.token}});
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  const j = await r.json(); return JSON.parse(j.files['1kzariki.json'].content);
+}
+
+function SyncPanel({db, replaceDB, toast}){
+  const c = SyncCfg.get();
+  const [token,setToken] = useState(c.token||'');
+  const [busy,setBusy] = useState(false);
+  const exportFile = () => {
+    const blob = new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='1kzariki-backup.json'; a.click();
+  };
+  const importFile = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const rd = new FileReader(); rd.onload=()=>{ try{ replaceDB(JSON.parse(rd.result)); toast('Импортировано'); }catch(err){ toast('Битый файл'); } }; rd.readAsText(f);
+  };
+  const save = ()=>{ SyncCfg.set({...SyncCfg.get(),token:token.trim()}); toast('Токен сохранён'); };
+  const push = async ()=>{ setBusy(true); try{ await gistPush(db); toast('Выгружено в облако'); }catch(e){ toast('Ошибка: '+e.message);} setBusy(false); };
+  const pull = async ()=>{ setBusy(true); try{ const r=await gistPull(); replaceDB(r); toast('Загружено из облака'); }catch(e){ toast('Ошибка: '+e.message);} setBusy(false); };
+  return (
+    <div>
+      <h2 style={{fontSize:24,margin:'2px 0 6px'}}>Синхронизация</h2>
+      <p style={{color:'var(--bone-dim)',fontSize:14,lineHeight:1.5,margin:'0 0 16px'}}>
+        Бэкап и облако в духе твоего VSCodeSyncFiles: один приватный gist + персональный токен.
+        Всё хранится локально, в облако уходит только по кнопке.</p>
+
+      <div className="h-sec" style={{marginTop:0}}>Файл</div>
+      <div className="board-actions" style={{marginTop:0}}>
+        <button className="btn btn-ghost btn-sm" onClick={exportFile}>↓ Скачать бэкап</button>
+        <label className="btn btn-ghost btn-sm">↑ Загрузить бэкап
+          <input type="file" accept="application/json" onChange={importFile} style={{display:'none'}}/>
+        </label>
+      </div>
+
+      <div className="h-sec">Облако (GitHub Gist)</div>
+      <div className="card">
+        <div className="rule-block">
+          <div className="lab"><span>Personal access token</span><span className="hint">scope: gist</span></div>
+          <input value={token} onChange={e=>setToken(e.target.value)} placeholder="ghp_…" type="password"
+            style={{width:'100%',padding:'12px 14px',borderRadius:12,background:'var(--graphite)',border:'1px solid var(--line)',color:'var(--bone)',fontFamily:'JetBrains Mono'}}/>
+        </div>
+        <div className="board-actions" style={{marginTop:6}}>
+          <button className="btn btn-ghost btn-sm" onClick={save}>Сохранить токен</button>
+          <button className="btn btn-brass btn-sm" disabled={busy} onClick={push}>⇧ Выгрузить</button>
+          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={pull}>⇩ Загрузить</button>
+        </div>
+        {c.gistId && <p style={{color:'var(--bone-faint)',fontSize:12,marginTop:10}}>gist: {c.gistId}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== app shell ============================== */
+function App(){
+  const [db, setDb] = useState(loadDB);
+  const [view, setView] = useState({name:'home'});
+  const [toastMsg, setToastMsg] = useState(null);
+  const toast = m => { setToastMsg(m); setTimeout(()=>setToastMsg(null),1700); };
+
+  useEffect(()=>{ saveDB(db); },[db]);
+
+  const persist = (game) => setDb(d=>({...d, games:d.games.map(g=>g.id===game.id?{...game,updatedAt:Date.now()}:g)}));
+  const replaceDB = (newdb)=>{ if(newdb && Array.isArray(newdb.games)){ setDb(newdb); setView({name:'home'}); } };
+
+  const go = (v) => {
+    if (v.name==='delete'){ setDb(d=>({...d,games:d.games.filter(g=>g.id!==v.id)})); setView({name:'home'}); toast('Партия удалена'); return; }
+    setView(v);
+  };
+  const createGame = (players, rules) => {
+    const g = { id:uid(), name:'Партия '+(db.games.length+1), createdAt:Date.now(), updatedAt:Date.now(),
+      players:players.map(p=>({...p})), rules:{...rules},
+      turns:[ (()=>{ const s={}; players.forEach(p=>s[p.id]=null); return {id:uid(),scores:s}; })() ] };
+    setDb(d=>({...d, games:[...d.games, g]}));
+    setView({name:'game', id:g.id});
+  };
+
+  const curGame = view.id ? db.games.find(g=>g.id===view.id) : null;
+  const tab = ['home','new','game'].includes(view.name) ? 'home' : view.name;
+
+  return (
+    <div>
+      <div className="topbar">
+        <div className="logo">
+          <DieLogo/>
+          <div>
+            <h1 className="brand">За<b>рики</b></h1>
+            <div className="sub">1000 на кубиках</div>
+          </div>
+        </div>
+      </div>
+
+      {view.name==='home' && <Home db={db} go={go}/>}
+      {view.name==='new' && <NewGame onCreate={createGame} go={go}/>}
+      {view.name==='game' && curGame && <GameBoard game={curGame} update={persist} go={go} toast={toast}/>}
+      {view.name==='game' && !curGame && <Home db={db} go={go}/>}
+      {view.name==='rules' && <RulesPage game={curGame} go={go}/>}
+      {view.name==='stats' && <Stats db={db} go={go}/>}
+      {view.name==='sync' && <SyncPanel db={db} replaceDB={replaceDB} toast={toast}/>}
+
+      <div className="nav">
+        <div className="nav-inner">
+          <button className={tab==='home'?'on':''} onClick={()=>go({name:'home'})}><span className="ic">🎲</span>Игры</button>
+          <button className={tab==='rules'?'on':''} onClick={()=>go({name:'rules', id:curGame?curGame.id:undefined})}><span className="ic">📜</span>Правила</button>
+          <button className={tab==='stats'?'on':''} onClick={()=>go({name:'stats'})}><span className="ic">📊</span>Стата</button>
+          <button className={tab==='sync'?'on':''} onClick={()=>go({name:'sync'})}><span className="ic">☁️</span>Синк</button>
+        </div>
+      </div>
+
+      {toastMsg && <div className="toast">{toastMsg}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<script>
+/* регистрация service worker (вне Babel — выполняется сразу) */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
