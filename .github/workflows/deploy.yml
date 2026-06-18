@@ -1,9 +1,9 @@
 # Деплой 1KZARIKI на GitHub Pages.
 # Сайт статический (нет сборки) — просто публикуем содержимое репозитория как есть.
 #
-# Pages включается автоматически (configure-pages с enablement: true) — лезть в Settings не нужно.
-# Если организация запрещает авто-включение, включи разово вручную:
-# Settings → Pages → Build and deployment → Source: "GitHub Actions", затем перезапусти workflow.
+# ОБЯЗАТЕЛЬНО включить Pages один раз вручную (токен в организации не может создать сайт сам):
+#   Settings → Pages → Build and deployment → Source: "GitHub Actions"
+# После этого пуш в main / ручной запуск выкатывают сайт автоматически.
 
 name: Deploy to GitHub Pages
 
@@ -35,8 +35,6 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true   # сам включает Pages (build type = GitHub Actions), если ещё не включён
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
