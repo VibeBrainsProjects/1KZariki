@@ -50,7 +50,7 @@ type Player = { id: string; name: string };
 
 type Turn = {
   id: string;
-  scores: { [playerId: string]: number | null | '555' }; // null = пусто, '555' = самосвал
+  scores: { [playerId: string]: number | null }; // null = пустая клетка
 };
 
 type Rules = {
@@ -58,9 +58,9 @@ type Rules = {
   barrelAt: number;                     // 850 | 880 | 1000 (1000 = без бочки)
   scale: 'classic' | 'fast';
   exact: boolean;
-  pitLines: number[];                   // напр. [300,600] | [200,500] | [] (выкл)
+  pitLines: number[];                   // активные ямы (выходы): [300,700] | [300] | [700] | []
   samosval: 0 | -50 | -100;             // штраф за каждый болт (кон в ноль)
-  dump555: 'off' | 1 | 2 | 3 | 'always';// 555 → сброс счёта в ноль; сколько раз срабатывает
+  dump555: 'off' | 1 | 2 | 3 | 'always';// счёт ровно 555 → сброс в ноль; сколько раз срабатывает
   bolt3: 0 | -50 | -100;                // штраф за 3 болта подряд
   overtake: 0 | -50 | -100;             // откат обогнанного
   entry: 0 | 100 | 120;                 // порог входа
@@ -88,7 +88,8 @@ type Rules = {
 type PlayerState = {
   total: number;       // итог с учётом штрафов
   busts: number;       // число болтов (конов в ноль)
-  dumps: number;       // число сработавших самосвалов-555
+  dumps: number;       // число сработавших самосвалов (счёт = 555)
+  dumpTurns: number[]; // индексы конов, на которых сработал самосвал
   best: number;        // лучший кон
   penalties: number;   // суммарный вычет (положительное число)
   opened: boolean;     // зашёл ли в игру
@@ -113,12 +114,6 @@ reentry   = threshold > 0 && rules.entryMode === 'each'
   для каждого player (порядок колонок):
     v = turn.scores[pid]; если v == null — пропустить
 
-    ── САМОСВАЛ 555 (v === '555') ──
-    lim = dump555 ('off' | 1 | 2 | 3 | 'always')
-    active = lim==='always' или (число и dumps < lim)
-    если active: total = 0; dumps++        // сброс; иначе 555 ничего не делает
-    перейти к следующему игроку
-
     ── РЕЖИМ "КАЖДЫЙ РАЗ" (reentry) ──
     если reentry:
       если v >= threshold:
@@ -139,6 +134,11 @@ reentry   = threshold > 0 && rules.entryMode === 'each'
         если bolt3 и boltRun >= 3: total += bolt3; penalties += |bolt3|; boltRun = 0
       иначе:
         boltRun = 0
+
+    ── САМОСВАЛ (счёт ровно 555) ──
+    lim = dump555 ('off' | 1 | 2 | 3 | 'always')
+    если total === 555 и (lim==='always' или (число и dumps < lim)):
+      total = 0; dumps++; dumpTurns += ti     // сброс; за лимитом 555 остаётся как есть
 
     ── после хода игрока ──
     если barrelAt < target и barrelAt <= total < target: everBarrel = true

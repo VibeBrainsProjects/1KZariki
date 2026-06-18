@@ -223,7 +223,6 @@ tfoot td{border-top:2px solid var(--line);padding:12px 6px 6px}
   font-weight:700;font-size:14px;color:var(--bone-dim)}
 .quick button:active{background:var(--slate)}
 .quick button.bust{color:var(--red);border-color:rgba(216,83,61,.4)}
-.quick button.dump{color:var(--brass);border-color:rgba(224,162,59,.45);font-weight:800}
 
 /* keyboard */
 .kb{display:flex;flex-direction:column;gap:7px;margin-top:14px;overflow:auto}
@@ -292,41 +291,34 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7
 /* ============================== rules ============================== */
 const DEFAULT_RULES = {
   target:1000, barrelAt:880, scale:'classic',
-  exact:true, pitLines:[300,600], samosval:0, bolt3:-100, dump555:3, overtake:-50, entry:120, entryMode:'once', confirm:true,
+  exact:true, pitLines:[300,700], samosval:0, bolt3:-100, dump555:3, overtake:-50, entry:120, entryMode:'once', confirm:true,
 };
 const PRESETS = {
-  'Классика':   { target:1000, barrelAt:880, scale:'classic', exact:true,  pitLines:[300,600], samosval:0,    bolt3:-100, dump555:3,       overtake:-50,  entry:120, entryMode:'once', confirm:true },
-  'Дворовая':   { target:1000, barrelAt:850, scale:'classic', exact:true,  pitLines:[200,500], samosval:0,    bolt3:-100, dump555:'always',overtake:-100, entry:120, entryMode:'each', confirm:true },
+  'Классика':   { target:1000, barrelAt:880, scale:'classic', exact:true,  pitLines:[300,700], samosval:0,    bolt3:-100, dump555:3,       overtake:-50,  entry:120, entryMode:'once', confirm:true },
+  'Дворовая':   { target:1000, barrelAt:850, scale:'classic', exact:true,  pitLines:[300,700], samosval:0,    bolt3:-100, dump555:'always',overtake:-100, entry:120, entryMode:'each', confirm:true },
   'Быстрая':    { target:1000, barrelAt:880, scale:'fast',    exact:false, pitLines:[],         samosval:0,    bolt3:0,    dump555:'off',   overtake:0,    entry:0,   entryMode:'once', confirm:false },
   'Без бочки':  { target:1000, barrelAt:1000,scale:'classic', exact:false, pitLines:[],         samosval:0,    bolt3:0,    dump555:'off',   overtake:-50,  entry:0,   entryMode:'once', confirm:false },
 };
 const QUICK = { classic:[5,10,15,20,25,30,40,50,100], fast:[50,100,150,200,250,300,500] };
-const PIT_LINES = [300,600]; // дефолт, если у партии не задано иное
+const PIT_LINES = [300,700]; // дефолтные ямы: диапазоны 200–300 и 600–700
 
 /* ============================== game math ============================== */
 function totalsFor(game){
-  // chronological simulator: entry gate + per-bolt + 3-bolt + overtake + самосвал-555 (сброс).
+  // chronological simulator: entry gate + per-bolt + 3-bolt + overtake + самосвал (счёт ровно 555 → сброс).
   const R = game.rules;
   const threshold = R.entry || 0;
   const reentry = threshold > 0 && R.entryMode === 'each'; // <120 wipes to zero, re-enter each time
-  const pitLines = R.pitLines || (R.pits ? PIT_LINES : []); // совместимость со старым флагом pits
+  const pitLines = R.pitLines || (R.pits ? PIT_LINES : []);
+  const DUMP_AT = 555; // самосвал: счёт ровно 555 очков сбрасывается в ноль
   const out = {};
   const boltRun = {};
-  game.players.forEach(p => { out[p.id] = {total:0,busts:0,best:0,penalties:0,opened:false,everBarrel:false,dumps:0}; boltRun[p.id]=0; });
+  game.players.forEach(p => { out[p.id] = {total:0,busts:0,best:0,penalties:0,opened:false,everBarrel:false,dumps:0,dumpTurns:[]}; boltRun[p.id]=0; });
 
-  game.turns.forEach(t => {
+  game.turns.forEach((t, ti) => {
     game.players.forEach(p => {
       const v = t.scores[p.id];
       if (v === null || v === undefined) return;
       const s = out[p.id];
-
-      // --- Самосвал 555: три пятёрки сбрасывают счёт в ноль (с лимитом срабатываний) ---
-      if (v === '555'){
-        const lim = R.dump555;
-        const active = lim === 'always' || (typeof lim === 'number' && lim > 0 && s.dumps < lim);
-        if (active){ s.total = 0; s.dumps++; boltRun[p.id] = 0; }
-        return; // 555 не идёт ни в болты, ни в очки
-      }
 
       if (reentry){
         // every кон must clear the threshold; a smaller one resets you to zero
@@ -354,6 +346,13 @@ function totalsFor(game){
         } else {
           boltRun[p.id] = 0;
         }
+      }
+
+      // --- Самосвал: счёт встал ровно на 555 → сброс в ноль (с лимитом срабатываний) ---
+      if (s.total === DUMP_AT){
+        const lim = R.dump555;
+        const active = lim === 'always' || (typeof lim === 'number' && lim > 0 && s.dumps < lim);
+        if (active){ s.total = 0; s.dumps++; s.dumpTurns.push(ti); boltRun[p.id] = 0; }
       }
 
       if (R.barrelAt < R.target && s.total >= R.barrelAt && s.total < R.target) s.everBarrel = true;
@@ -438,8 +437,8 @@ function Sheet({label, children, onClose}){
   );
 }
 
-function NumberModal({title, initial, scale, allowBust, allow555, onSave, onClose, onDelete}){
-  const [val, setVal] = useState(initial===null||initial===undefined||initial==='555' ? '' : String(initial));
+function NumberModal({title, initial, scale, allowBust, onSave, onClose, onDelete}){
+  const [val, setVal] = useState(initial===null||initial===undefined ? '' : String(initial));
   const push = d => setVal(v => (v==='0'?d: (v+d)).slice(0,4));
   const back = () => setVal(v => v.slice(0,-1));
   const clear = () => setVal('');
@@ -460,7 +459,6 @@ function NumberModal({title, initial, scale, allowBust, allow555, onSave, onClos
       <div className="quick">
         {QUICK[scale].map(q=>(<button key={q} onClick={()=>setVal(String(q))}>{q}</button>))}
         {allowBust && <button className="bust" onClick={()=>commit(0)}>Болт · 0</button>}
-        {allow555 && <button className="dump" onClick={()=>commit('555')}>Самосвал 555</button>}
       </div>
       <div className="pad">
         {[1,2,3,4,5,6,7,8,9].map(n=>(<button key={n} onClick={()=>push(String(n))}>{n}</button>))}
@@ -639,17 +637,22 @@ function NewGame({onCreate, go}){
             <button key={t} className={"chip "+(rules.exact===v?'on':'')} onClick={()=>setRule('exact',v)}>{t}</button>
           ))}
         </RuleRow>
-        <RuleRow label="Ямы" hint="застрял перед порогом — выпрыгни за ход">
-          {[{l:'выкл',v:[]},{l:'300 · 600',v:[300,600]},{l:'200 · 500',v:[200,500]}].map(o=>(
-            <button key={o.l} className={"chip "+(((rules.pitLines||[]).join(',')===o.v.join(','))?'on':'')} onClick={()=>setRule('pitLines',o.v)}>{o.l}</button>
-          ))}
+        <RuleRow label="Ямы" hint="застрял в диапазоне — выпрыгни за ход">
+          {(()=>{ const pls=rules.pitLines||[];
+            const toggle=line=>setRule('pitLines', pls.includes(line)?pls.filter(x=>x!==line):[...pls,line].sort((a,b)=>a-b));
+            return <>
+              <button className={"chip "+(pls.length===0?'on':'')} onClick={()=>setRule('pitLines',[])}>нет</button>
+              <button className={"chip "+(pls.includes(300)?'on':'')} onClick={()=>toggle(300)}>200–300</button>
+              <button className={"chip "+(pls.includes(700)?'on':'')} onClick={()=>toggle(700)}>600–700</button>
+            </>;
+          })()}
         </RuleRow>
         <RuleRow label="Штраф за болт" hint="за каждый кон в ноль">
           {[0,-50,-100].map(v=>(
             <button key={v} className={"chip "+(rules.samosval===v?'on':'')} onClick={()=>setRule('samosval',v)}>{v===0?'нет':v}</button>
           ))}
         </RuleRow>
-        <RuleRow label="Самосвал (555)" hint="три пятёрки — сброс в ноль; сколько раз срабатывает">
+        <RuleRow label="Самосвал (555)" hint="счёт ровно 555 — сброс в ноль; сколько раз срабатывает">
           {[['off','выкл'],[1,'1'],[2,'2'],[3,'3'],['always','всегда']].map(([val,lbl])=>(
             <button key={lbl} className={"chip "+(rules.dump555===val?'on':'')} onClick={()=>setRule('dump555',val)}>{lbl}</button>
           ))}
@@ -793,14 +796,14 @@ function GameBoard({game, update, go, toast}){
                   {game.players.map(p=>{
                     const v = t.scores[p.id];
                     const isBust = v===0;
-                    const isDump = v==='555';
+                    const isDump = tot[p.id].dumpTurns && tot[p.id].dumpTurns.includes(ti);
                     return (
                       <td className="cell" key={p.id}>
                         <button className={"cell-btn "+(v===null?'empty ':'')+(isBust?'bust':'')+(isDump?'dump':'')}
                           onClick={()=>openCell(ti,p.id)} style={{position:'relative'}}>
                           {v===null ? '·'
-                            : isDump ? <span>555<div className="dump-tag">сброс</div></span>
                             : isBust ? <span>0<div className="bust-tag">болт</div></span>
+                            : isDump ? <span className="num">{v}<div className="dump-tag">самосвал</div></span>
                             : <span className="num">{v}</span>}
                         </button>
                       </td>
@@ -852,7 +855,7 @@ function GameBoard({game, update, go, toast}){
         const pl = game.players.find(p=>p.id===edit.playerId);
         return <NumberModal
           title={pl.name + ' · кон ' + (edit.turnIdx+1)}
-          initial={v} scale={R.scale} allowBust={true} allow555={(R.dump555||'off')!=='off'}
+          initial={v} scale={R.scale} allowBust={true}
           onClose={()=>setEdit(null)}
           onDelete={v!==null ? ()=>setScore(edit.turnIdx, edit.playerId, null) : null}
           onSave={n=>setScore(edit.turnIdx, edit.playerId, n)}
@@ -878,7 +881,7 @@ function RulesPage({game, go}){
           <span className="chip on">бочка {R.barrelAt===1000?'выкл':R.barrelAt}</span>
           <span className="chip on">{classic?'1=10, 5=5':'1=100, 5=50'}</span>
           <span className="chip on">{R.exact?'ровно 1000':'≥1000'}</span>
-          {pl.length>0 && <span className="chip on">ямы {pl.join('/')}</span>}
+          {pl.length>0 && <span className="chip on">ямы {pl.map(l=>(l-100)+'–'+l).join(', ')}</span>}
           {R.samosval!==0 && <span className="chip on">болт {R.samosval}</span>}
           {dumpN!=='off' && <span className="chip on">самосвал 555 {dumpN==='always'?'∞':'×'+dumpN}</span>}
           {R.bolt3!==0 && <span className="chip on">3 болта {R.bolt3}</span>}
@@ -909,9 +912,9 @@ function RulesPage({game, go}){
         <p>Бросаешь все 5 кубиков. Откладываешь зачётные, остальные перебрасываешь, добирая очки. Хочешь — записываешь сумму кона; нет ни одной зачётной кости — <span className="tag">болт</span>, очки кона сгорают{R.samosval?` (штраф ${R.samosval})`:''}.</p>
 
         {dumpN!=='off' && <><h3>Самосвал (555)</h3>
-        <p>Выпало <span className="tag">555</span> (три пятёрки) — весь набранный счёт сбрасывается в ноль. {dumpN==='always'
-          ? 'Срабатывает всегда, сколько бы раз ни выпало.'
-          : `Срабатывает первые ${dumpN} раз${dumpN===1?'':'а'} за партию; дальше 555 уже не сбрасывает.`} В приложении вводится кнопкой «Самосвал 555» в окне ввода очков.</p></>}
+        <p>Счёт встал ровно на <span className="tag">555</span> — весь набранный счёт сбрасывается в ноль. {dumpN==='always'
+          ? 'Срабатывает всегда, сколько бы раз ни попал на 555.'
+          : `Срабатывает первые ${dumpN} раз${dumpN===1?'':'а'} за партию; дальше 555 уже не сбрасывает.`} Считается автоматически — попал на 555, и счёт обнулился (в таблице кон помечается «самосвал»).</p></>}
 
         {R.entry!==0 && <><h3>Вход в игру</h3>
         <p>Чтобы открыться, нужно набрать <span className="tag">от {R.entry}</span> за один кон. Пока не зашёл — очки не пишутся.</p>
@@ -926,9 +929,9 @@ function RulesPage({game, go}){
         <h3>Бочка</h3>
         <p>На отметке <span className="tag">{R.barrelAt===1000?'(в этой партии выключена)':R.barrelAt}</span> счёт замораживается — нужно за один ход добрать ровно до 1000{R.barrelAt<1000?` (это ${1000-R.barrelAt})`:''}. На бочке только один игрок; залез второй — первый слетает.</p>
 
-        {pl.length>=2 && (()=>{ const a=pl[0], b=pl[1]; return <><h3>Ямы</h3>
-        <p>Ямы — не точки, а промежутки по сотне перед порогом: первая <span className="tag">{a-100}–{a-1}</span> (выход на {a}), вторая <span className="tag">{b-100}–{b-1}</span> (выход на {b}). Внутри промежутка ты «в яме» на любом числе.</p>
-        <p>Выбраться — только перешагнув порог <span className="tag">за один ход</span>: добить счёт до {a} (или {b}) или выше. Подползать мелкими конами нельзя. Пример: на {a-70} нужно за ход набрать минимум 70, чтобы выскочить на {a}.</p></>; })()}
+        {pl.length>0 && <><h3>Ямы</h3>
+        <p>Ямы — промежутки-ловушки: {pl.map(l=>`${l-100}–${l}`).join(' и ')}. Внутри промежутка ты «в яме» на любом числе; за его пределами — чисто (например, 555 между ямами как раз свободно — туда и попадает самосвал).</p>
+        <p>Выбраться — только перешагнув верх промежутка <span className="tag">за один ход</span>: добить счёт до {pl.join(' или ')} или выше. Подползать мелкими конами нельзя. Пример: на {pl[0]-70} нужно за ход набрать минимум 70, чтобы выскочить на {pl[0]}.</p></>}
         {R.overtake!==0 && <><h3>Обгон</h3><p>Догнал соперника точно в его счёт — он откатывается на <span className="tag">{R.overtake}</span>.</p></>}
         <h3>Перебор</h3>
         <p>{R.exact ? 'Нужно ровно 1000 — вылез выше, не засчитывается. На 950+ умнее остановиться.' : 'Достаточно набрать 1000 или больше.'}</p>
