@@ -50,7 +50,7 @@ type Player = { id: string; name: string };
 
 type Turn = {
   id: string;
-  scores: { [playerId: string]: number | null }; // null = клетка пустая
+  scores: { [playerId: string]: number | null | '555' }; // null = пусто, '555' = самосвал
 };
 
 type Rules = {
@@ -58,8 +58,9 @@ type Rules = {
   barrelAt: number;                     // 850 | 880 | 1000 (1000 = без бочки)
   scale: 'classic' | 'fast';
   exact: boolean;
-  pits: boolean;
-  samosval: 0 | -50 | -100;             // штраф за каждый кон в ноль
+  pitLines: number[];                   // напр. [300,600] | [200,500] | [] (выкл)
+  samosval: 0 | -50 | -100;             // штраф за каждый болт (кон в ноль)
+  dump555: 'off' | 1 | 2 | 3 | 'always';// 555 → сброс счёта в ноль; сколько раз срабатывает
   bolt3: 0 | -50 | -100;                // штраф за 3 болта подряд
   overtake: 0 | -50 | -100;             // откат обогнанного
   entry: 0 | 100 | 120;                 // порог входа
@@ -68,7 +69,7 @@ type Rules = {
 };
 ```
 
-Константа `PIT_LINES = [300, 600]`.
+Константа `PIT_LINES = [300, 600]` — дефолт для совместимости со старым флагом `pits`; актуальные позиции берутся из `rules.pitLines`.
 
 ## 4. Хранилище (persistence)
 
@@ -86,7 +87,8 @@ type Rules = {
 ```ts
 type PlayerState = {
   total: number;       // итог с учётом штрафов
-  busts: number;       // число самосвалов
+  busts: number;       // число болтов (конов в ноль)
+  dumps: number;       // число сработавших самосвалов-555
   best: number;        // лучший кон
   penalties: number;   // суммарный вычет (положительное число)
   opened: boolean;     // зашёл ли в игру
@@ -110,6 +112,12 @@ reentry   = threshold > 0 && rules.entryMode === 'each'
 для каждого turn по порядку:
   для каждого player (порядок колонок):
     v = turn.scores[pid]; если v == null — пропустить
+
+    ── САМОСВАЛ 555 (v === '555') ──
+    lim = dump555 ('off' | 1 | 2 | 3 | 'always')
+    active = lim==='always' или (число и dumps < lim)
+    если active: total = 0; dumps++        // сброс; иначе 555 ничего не делает
+    перейти к следующему игроку
 
     ── РЕЖИМ "КАЖДЫЙ РАЗ" (reentry) ──
     если reentry:
@@ -145,7 +153,7 @@ reentry   = threshold > 0 && rules.entryMode === 'each'
   remaining = target - total
   won       = exact ? total === target : total >= target
   over      = exact && total > target
-  pit       = pits ? первая PIT_LINE l, где (l-100) <= total < l : null
+  pit       = pitLines.length ? первая l из pitLines, где (l-100) <= total < l : null
   needEntry = (threshold > 0 && !opened) ? threshold : 0
 ```
 
