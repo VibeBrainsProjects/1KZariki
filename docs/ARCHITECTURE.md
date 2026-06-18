@@ -201,7 +201,7 @@ python3 -m http.server 8080
 # GitHub Pages — отдать index.html из ветки/папки Pages
 ```
 
-**Авто-деплой.** `.github/workflows/deploy.yml` публикует репозиторий на Pages официальными экшенами (`configure-pages` → `upload-pages-artifact` с `path: "."` → `deploy-pages`) на каждый пуш в `main`. Предварительно один раз: Settings → Pages → Source: «GitHub Actions». Артефакт — корень репозитория, поэтому `index.html` и спутники (`sw.js`, `manifest`, `icons/`) сразу доступны по относительным путям.
+**Деплой.** Сайт — статика в корне, поэтому публикуется прямо из ветки: Settings → Pages → Source: «Deploy from a branch» → `main`, `/ (root)`. Файл `.nojekyll` в корне отключает Jekyll, чтобы `sw.js`/`icons/` отдавались без обработки. Относительные пути (`./…`) обеспечивают работу на project-сайте `https://vibebrainsprojects.github.io/1KZariki/`.
 
 ## 10. Миграция на Vite (план)
 

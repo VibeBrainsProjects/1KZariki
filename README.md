@@ -2,6 +2,8 @@
 
 Счётчик для игры в **1000 на кубиках** (пять костей). Заводишь партию, добавляешь игроков, щёлкаешь очки за каждый кон — а бочка, ямы, самосвалы, заходы и штрафы считаются и подсвечиваются сами.
 
+**▶ Открыть приложение: https://vibebrainsprojects.github.io/1KZariki/**
+
 Один файл `index.html`, без сборки, всё хранится в браузере. Открыл — играешь.
 
 ---
@@ -31,9 +33,9 @@ python3 -m http.server 8080
 
 Для деплоя достаточно положить `index.html` (со спутниками) на любой статический хостинг (GitHub Pages, Netlify, S3 и т.п.).
 
-### Авто-деплой на GitHub Pages
+### Деплой на GitHub Pages
 
-В репозитории есть workflow `.github/workflows/deploy.yml`: каждый пуш в `main` публикует сайт на Pages. Включить один раз: **Settings → Pages → Build and deployment → Source: «GitHub Actions»**. Дальше — пушишь и катится само (можно и вручную из вкладки Actions).
+Сайт — статика в корне репозитория, поэтому деплоится прямо из ветки, без CI: **Settings → Pages → Source: «Deploy from a branch» → Branch `main`, Folder `/ (root)` → Save**. Файл `.nojekyll` в корне отключает обработку Jekyll, чтобы ассеты (`sw.js`, `icons/`) отдавались как есть. Сайт публикуется на `https://vibebrainsprojects.github.io/1KZariki/`.
 
 ## Стек
 
@@ -56,8 +58,7 @@ python3 -m http.server 8080
 ├── manifest.webmanifest    # PWA-манифест
 ├── sw.js                   # service worker (офлайн-кэш)
 ├── icons/                  # иконки приложения (192/512/maskable/apple/favicon)
-├── .github/workflows/
-│   └── deploy.yml          # авто-деплой на GitHub Pages
+├── .nojekyll               # отключает Jekyll на GitHub Pages
 ├── LICENSE
 ├── README.md
 └── docs/
