@@ -299,7 +299,7 @@ const PRESETS = {
   'Быстрая':    { target:1000, barrelAt:880, scale:'fast',    exact:false, pitLines:[],         samosval:0,    bolt3:0,    dump555:'off',   overtake:0,    entry:0,   entryMode:'once', confirm:false },
   'Без бочки':  { target:1000, barrelAt:1000,scale:'classic', exact:false, pitLines:[],         samosval:0,    bolt3:0,    dump555:'off',   overtake:-50,  entry:0,   entryMode:'once', confirm:false },
 };
-const QUICK = { classic:[5,10,15,20,25,30,40,50,100], fast:[50,100,150,200,250,300,500] };
+const QUICK = { classic:[5,10,15,20,25,30,40,50,100,125,250], fast:[50,100,150,200,250,300,500] };
 const PIT_LINES = [300,700]; // дефолтные ямы: диапазоны 200–300 и 600–700
 
 /* ============================== game math ============================== */
@@ -903,13 +903,16 @@ function RulesPage({game, go}){
             <tr><td>Одна пятёрка</td><td className="num">{classic?'5':'50'}</td></tr>
             <tr><td>Три двойки / тройки / …</td><td className="num">{classic?'20 / 30 / …':'×100'}</td></tr>
             <tr><td>Три единицы</td><td className="num">{classic?'100':'1000'}</td></tr>
+            <tr><td>Стрит 1-2-3-4-5</td><td className="num">125</td></tr>
+            <tr><td>Стрит 2-3-4-5-6</td><td className="num">250</td></tr>
             <tr><td>Четыре одинаковых</td><td>удваивает тройку</td></tr>
             <tr><td>Пять единиц</td><td className="num">сразу победа</td></tr>
           </tbody>
         </table>
 
         <h3>Ход</h3>
-        <p>Бросаешь все 5 кубиков. Откладываешь зачётные, остальные перебрасываешь, добирая очки. Хочешь — записываешь сумму кона; нет ни одной зачётной кости — <span className="tag">болт</span>, очки кона сгорают{R.samosval?` (штраф ${R.samosval})`:''}.</p>
+        <p>Бросаешь все 5 кубиков, откладываешь зачётные кости, остальными перебрасываешь, добирая очки. Закрыть ход можно, только когда на доске осталось <span className="tag">не больше 2 кубиков</span> (один или два): пока их больше двух — кидать обязан, остановиться нельзя.</p>
+        <p>На двух последних кубиках: выпала пара — счёт кона сохраняется, перекидываешь все пять и продолжаешь; пары нет — <span className="tag">болт</span>, очки кона сгорают{R.samosval?` (штраф ${R.samosval})`:''}.</p>
 
         {dumpN!=='off' && <><h3>Самосвал (555)</h3>
         <p>Счёт встал ровно на <span className="tag">555</span> — весь набранный счёт сбрасывается в ноль. {dumpN==='always'
